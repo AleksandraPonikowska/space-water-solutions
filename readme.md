@@ -52,3 +52,25 @@ In "OAuth clients" add an client, for now leave the box unchecked
 ```bash
 streamlit run app/main.py
 ```
+
+
+## Mały poradnik git'a
+Git jest prosty i nie należy się go bać
+To używanie jakiś 4 komend na krzyż, jeśli się nic nie popsuje
+Jak wam się coś popsuje to naprawię ja albo ja i kolega Geminiusz
+
+Mamy nasze repozytorium, czyli wspólną wersję
+Każdy z nas ma kopię na swoim komputrze
+
+### Pobieranie aktualnej wersji projektu
+```bash
+git pull
+```
+
+### Dodanie swoich zmian i wysłanie ich na serwer
+```
+git pull 
+git add .
+git commit -m "Krótki opis zmiany"
+git push
+```
