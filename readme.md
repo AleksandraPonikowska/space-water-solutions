@@ -1,3 +1,3 @@
-Hacaton - Space for Water
-team name: Poland can into space
-project name: SwS - Space Water Solutions
+# Hacaton - Space for Water
+### Team name: Poland can into space
+### Project name: SwS - Space Water Solutions
