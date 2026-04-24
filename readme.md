@@ -6,6 +6,7 @@
 
 ### 1. Prerequisites
 Ensure you have **Python** installed (download it from [python.org](https://www.python.org/downloads/)). 
+
 **Important:** During installation, make sure to check the box **"Add Python to PATH"**.
 
 ### 2. Download the Project
@@ -37,7 +38,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 5. Setup Credentials
+### 5. Setup Credentials
 1. Create a new file named .env in the main folder of the project.
 2. Open the file and paste your credentials in the following format:
 ```
@@ -47,7 +48,7 @@ SH_SECRET=your_client_secret_here
 You can obtain these from [here](https://shapps.dataspace.copernicus.eu/dashboard/#/account/settings)
 In "OAuth clients" add an client, for now leave the box unchecked 
 
-### 5. Run the application :3
+### 6. Run the application :3
 ```bash
 streamlit run app/main.py
 ```
