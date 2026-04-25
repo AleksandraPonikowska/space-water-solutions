@@ -28,11 +28,14 @@ city = st.sidebar.selectbox("Wybierz Region", ["Wrocław", "Warszawa", "Poznań"
 st.sidebar.divider()
 st.sidebar.info("Używamy danych Copernicus Sentinel-2 oraz Sentinel-1 (Radar SAR) do monitorowania wilgotności gleby.")
 
+
 # --- DANE
 dates = pd.read_csv("./data/wroclaw_clean_data.csv"); #zwraca obiekt dataframe
-#dates.interpolate("linear",0)
+#dates.interpolate("linear",0) #przyda sie po zmianie na mniej czyste dane
 ndvi_values = [1,2]
-dates_p1 = dates['Sektor_ID'] == "p1"
+dates_s1 = dates[dates['Sektor_ID'] == 'S_1'] #podział datafrema na sektory
+
+
 
 # --- GŁÓWNY PANEL ---
 st.title(f"Raport Ryzyka Wodnego: {city}")
@@ -83,7 +86,7 @@ st.pydeck_chart(pdk.Deck(
 
 with right_col:
     st.subheader("📈 Trend i Predykcja AI")
-    #st.scatter_chart(dates_p1,x="Data",y="NDWI")
+    st.scatter_chart(dates_s1,x="Data",y="NDWI")
 
     # fig_trend = go.Figure()
     # # Historia
@@ -107,5 +110,5 @@ with right_col:
 #     st.success("Warunki w normie. Brak zagrożenia suszą w najbliższych 7 dniach.")
 # dates
 # --- STOPKA ---
-dates_p1
+dates_s1
 st.caption("AquaRisk AI | Cassini Hackathon 2026 | Powered by Copernicus & Galileo")
