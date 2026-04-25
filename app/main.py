@@ -8,14 +8,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pydeck as pdk
 import plotly
-import folium as fl
+#import folium as fl
 
 
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="AquaRisk AI", page_icon="💧", layout="wide")
 
 
-# --- DANE
+# --- DANE ie ruszac
 dates = pd.read_csv('./data/wroclaw_clean_data.csv'); #zwraca obiekt dataframe
 #dates.interpolate("linear",0) #przyda sie po zmianie na mniej czyste dane
 del dates['NDVI']
@@ -23,7 +23,7 @@ del dates['NDWI']
 ndvi_values = [1,2]
 sektor = "S_1"
 dzien = "2025-07-01"
-
+# nie ruszac
 # --- CSS dla lepszego wyglądu (Hackathon Style) ---
 st.markdown("""
     <style>
@@ -62,19 +62,20 @@ st.divider()
 # 2. MAPA I WYKRES TRENDU
 left_col, right_col = st.columns([1, 1])
 
-with left_col:
+with left_col: 
+    #nie ruszac
     chart_data = dates[dates['Data']==dzien]
 
     chart_data  
-    mapa = fl.Map([51.03,16.81],zoom_start = 10) #0,02 z kazdej strony
-    for sektor in dates["Sektor_ID"]:
-        fl.Rectangle(
-            bounds = [[[dates[dates["Sektor_ID"]==sektor]['Lon']]-0.1,[dates[dates["Sektor_ID"]==sektor]['Lat']]-0.1],[[dates[dates["Sektor_ID"]==sektor]['Lon']]+0.1,[dates[dates["Sektor_ID"]==sektor]['Lat']]+0.1]],
-            line_join="round",
-            dash_array="5, 5"
-        )
-        fl.add_to(mapa)
-    mapa
+    # mapa = fl.Map([51.03,16.81],zoom_start = 10) #0,02 z kazdej strony
+    # for sektor in dates["Sektor_ID"]:
+    #     fl.Rectangle(
+    #         bounds = [[[dates[dates["Sektor_ID"]==sektor]['Lon']]-0.1,[dates[dates["Sektor_ID"]==sektor]['Lat']]-0.1],[[dates[dates["Sektor_ID"]==sektor]['Lon']]+0.1,[dates[dates["Sektor_ID"]==sektor]['Lat']]+0.1]],
+    #         line_join="round",
+    #         dash_array="5, 5"
+    #     )
+    #     fl.add_to(mapa)
+    # mapa
 # st.pydeck_chart(pdk.Deck(
 #     map_style=None,
 #     initial_view_state=pdk.ViewState(
