@@ -51,6 +51,8 @@ In "OAuth clients" add an client, for now leave the box unchecked
 ### 6. Run the application :3
 ```bash
 streamlit run app/main.py
+
+# if not works 4u, try: python -m streamlit run app/main.py
 ```
 
 
