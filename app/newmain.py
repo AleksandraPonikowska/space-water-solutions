@@ -33,13 +33,39 @@ def compute_rect_center(clicked):
 icon_path = "./assets/cozaikona.png"
 icon = Image.open(icon_path)
 
-dates = pd.read_csv('./data/wroclaw_small/clean.csv'); #zwraca obiekt dataframe
-#dates.interpolate("linear",0) #przyda sie po zmianie na mniej czyste dane
-del dates['NDVI']
-del dates['NDWI']
-ndvi_values = [1,2]
+dates = pd.read_csv('./data/wroclaw/merged.csv'); #zwraca obiekt dataframe
+dates_future = pd.read_csv('./data/wroclaw/forecast_1m.csv')
+
+# Normalize forecast date column name if needed.
+if 'Forecast_Date' in dates_future.columns and 'Data' not in dates_future.columns:
+    dates_future = dates_future.rename(columns={'Forecast_Date': 'Data'})
+
+# Remove any repeated header/description rows.
+dates = dates[dates['Data'].astype(str).str.lower() != 'data']
+dates_future = dates_future[dates_future['Data'].astype(str).str.lower() != 'data']
+
+# Drop any metadata/description columns if present.
+drop_cols = [col for col in dates.columns if 'opis' in col.lower() or 'description' in col.lower()]
+dates = dates.drop(columns=drop_cols, errors='ignore')
+if 'Data' in dates_future.columns:
+    drop_cols_future = [col for col in dates_future.columns if 'opis' in col.lower() or 'description' in col.lower()]
+    dates_future = dates_future.drop(columns=drop_cols_future, errors='ignore')
+
+# Normalize historical dates and save last available date from merged.csv only.
+dates['Data'] = pd.to_datetime(dates['Data']).dt.date
+last_historical_date = dates['Data'].max()
+
+# Normalize forecast dates as well.
+if 'Data' in dates_future.columns:
+    dates_future['Data'] = pd.to_datetime(dates_future['Data']).dt.date
+
+# Stack current and future records vertically.
+dates = pd.concat([dates, dates_future], ignore_index=True)
+
+# Ensure date column is normalized for combined DataFrame.
+dates['Data'] = pd.to_datetime(dates['Data']).dt.date
 sektor = "S_1"
-dzien = "2025-07-01"
+dzien = "2026-03-01"
 
 st.set_page_config(
     page_title="SwS - Space Water Solutions",
@@ -131,47 +157,21 @@ st.markdown("""
         padding: 1.5rem;
         background-color: #f0f2f6;
     }
+    [data-testid="stRadio"] *,
+    .stRadio * {
+        color: #f0f2f6 !important;
+    }
+    .choice-text {
+        color: #f0f2f6 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 
 
 
-chart_data = dates[dates['Data']==dzien]
-dane = chart_data[chart_data['Sektor_ID']=="S_1"]
-
+options = ["NDWI", "NDVI", "NDMI"]
 sidebar_col, main_col = st.columns([1.6, 5], gap=None)
-
-with main_col:
-    city = "Wrocław"
-    st.title(f"{city}")
-
-    kw = {
-        "line_cap": "round",
-        "fill": True,
-        "fill_opacity": 0.6,
-        "weight": 2,
-    }
-    mapa = fl.Map([51.03,16.81], zoom_start=10)
-    for sektor in chart_data["Sektor_ID"]:
-        dane = chart_data[chart_data['Sektor_ID']==sektor]
-        kolor = cm.LinearColormap(["red", "yellow", "green"], vmin=-1, vmax=1)
-        lwy_lon = dane["Lon"].iat[0]-0.01
-        pwy_lon = dane["Lon"].iat[0]+0.01
-        lwy_lat = dane["Lat"].iat[0]-0.01
-        pwy_lat = dane["Lat"].iat[0]+0.01
-        bounds = [(lwy_lat, lwy_lon), (pwy_lat, pwy_lon)]
-        rect = fl.Rectangle(
-            bounds=bounds,
-            **kw,
-            fill_color=kolor(dane["NDMI"].iat[0]),
-            #tooltip = f"{sektor}: NDMI {dane['NDMI'].iat[0]:.2f}",
-        )
-        rect.add_to(mapa)
-    kolor.caption = "Legenda"
-    mapa.add_child(kolor)
-    st_data = st_folium(mapa, width=900, height=650, returned_objects=["last_object_clicked", "last_clicked"])
-    st.empty()
 
 with sidebar_col:
     with st.container(border=True):
@@ -182,9 +182,55 @@ with sidebar_col:
             "Wybierz Region",
             ["Wrocław", "Warszawa", "Poznań", "Gdańsk"]
         )
-
+        choice = st.radio("Wybierz wskaźnik", options, index=2)
+        st.markdown(f'<span class="choice-text">Wybrany wskaźnik: {choice}</span>', unsafe_allow_html=True)
+        selected_date = st.select_slider(
+            "Wybierz datę",
+            options=sorted(dates['Data'].unique()),
+            value=pd.to_datetime(dzien).date(),
+        )
+        if selected_date > last_historical_date:
+            st.markdown("<div style='color:#093560; font-weight:600;'>Wybrana data to prognozy (predictions).</div>", unsafe_allow_html=True)
         st.divider()
 
+chart_data = dates[dates['Data'] == selected_date]
+
+with main_col:
+    city = "Wrocław"
+    st.title(f"{city}")
+
+    if chart_data.empty:
+        st.warning(f"Brak danych dla daty {selected_date}")
+        st.stop()
+
+    kw = {
+        "line_cap": "round",
+        "fill": True,
+        "fill_opacity": 0.6,
+        "weight": 2,
+    }
+    mapa = fl.Map([51.03,16.81], zoom_start=10)
+    for sektor in chart_data["Sektor_ID"].unique():
+        dane = chart_data[chart_data['Sektor_ID']==sektor]
+        kolor = cm.LinearColormap(["red", "yellow", "green"], vmin=-1, vmax=1)
+        lwy_lon = dane["Lon"].iat[0]-0.01
+        pwy_lon = dane["Lon"].iat[0]+0.01
+        lwy_lat = dane["Lat"].iat[0]-0.01
+        pwy_lat = dane["Lat"].iat[0]+0.01
+        bounds = [(lwy_lat, lwy_lon), (pwy_lat, pwy_lon)]
+        rect = fl.Rectangle(
+            bounds=bounds,
+            **kw,
+            fill_color=kolor(dane[choice].iat[0]),
+            #tooltip = f"{sektor}: {choice} {dane[choice].iat[0]:.2f}",
+        )
+        rect.add_to(mapa)
+    kolor.caption = "Legenda"
+    mapa.add_child(kolor)
+    st_data = st_folium(mapa, width=900, height=650, returned_objects=["last_object_clicked", "last_clicked"])
+    st.empty()
+
+with sidebar_col:
         st.markdown("### Wykres")
         clicked = st_data.get("last_object_clicked") or st_data.get("last_clicked")
         center_lon, center_lat = compute_rect_center(clicked)
@@ -195,10 +241,9 @@ with sidebar_col:
             selected_row = chart_data.loc[nearest_idx]
             selected_sector = selected_row["Sektor_ID"]
         else:
-            st.info("Kliknij prostokąt na mapie")
             selected_sector = sektor
 
-        st.scatter_chart(dates[dates["Sektor_ID"] == selected_sector], x="Data", y="NDMI")
+        st.scatter_chart(dates[dates["Sektor_ID"] == selected_sector], x="Data", y=choice)
 
         st.divider()
 
