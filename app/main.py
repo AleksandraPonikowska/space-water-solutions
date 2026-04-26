@@ -5,10 +5,10 @@ from PIL import Image
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
+#import plotly.express as px
+#import plotly.graph_objects as go
 import pydeck as pdk
-import plotly
+#import plotly
 import folium as fl
 import branca.colormap as cm
 from streamlit_folium import st_folium
@@ -64,6 +64,7 @@ dates = pd.concat([dates, dates_future], ignore_index=True)
 
 # Ensure date column is normalized for combined DataFrame.
 dates['Data'] = pd.to_datetime(dates['Data']).dt.date
+
 sektor = "S_1"
 dzien = "2026-03-01"
 
@@ -170,7 +171,7 @@ st.markdown("""
 
 
 
-options = ["NDWI", "NDVI", "NDMI"]
+options = ["NDWI", "NDVI", "NDMI", "WRI"]
 sidebar_col, main_col = st.columns([1.6, 5], gap=None)
 
 with sidebar_col:
@@ -189,8 +190,12 @@ with sidebar_col:
             options=sorted(dates['Data'].unique()),
             value=pd.to_datetime(dzien).date(),
         )
-        if selected_date > last_historical_date:
-            st.markdown("<div style='color:#093560; font-weight:600;'>Wybrana data to prognozy (predictions).</div>", unsafe_allow_html=True)
+        forecast_dates = set(dates_future['Data']) if 'Data' in dates_future.columns else set()
+        is_prediction = selected_date > last_historical_date or selected_date in forecast_dates
+        if is_prediction:
+            st.info("Wybrana data to prognozy (predictions).")
+        else:
+            st.info("Wybrana data to dane historyczne.")
         st.divider()
 
 chart_data = dates[dates['Data'] == selected_date]
@@ -210,28 +215,26 @@ with main_col:
         "weight": 2,
     }
     mapa = fl.Map([51.03,16.81], zoom_start=10)
-    for sektor in chart_data["Sektor_ID"].unique():
-        dane = chart_data[chart_data['Sektor_ID']==sektor]
+    for sector in chart_data["Sektor_ID"].unique():
+        dane = chart_data[chart_data['Sektor_ID'] == sector]
         kolor = cm.LinearColormap(["red", "yellow", "green"], vmin=-1, vmax=1)
-        lwy_lon = dane["Lon"].iat[0]-0.01
-        pwy_lon = dane["Lon"].iat[0]+0.01
-        lwy_lat = dane["Lat"].iat[0]-0.01
-        pwy_lat = dane["Lat"].iat[0]+0.01
+        lwy_lon = dane["Lon"].iat[0] - 0.01
+        pwy_lon = dane["Lon"].iat[0] + 0.01
+        lwy_lat = dane["Lat"].iat[0] - 0.01
+        pwy_lat = dane["Lat"].iat[0] + 0.01
         bounds = [(lwy_lat, lwy_lon), (pwy_lat, pwy_lon)]
         rect = fl.Rectangle(
             bounds=bounds,
             **kw,
             fill_color=kolor(dane[choice].iat[0]),
-            #tooltip = f"{sektor}: {choice} {dane[choice].iat[0]:.2f}",
+            #tooltip = f"{sector}: {choice} {dane[choice].iat[0]:.2f}",
         )
         rect.add_to(mapa)
     kolor.caption = "Legenda"
     mapa.add_child(kolor)
     st_data = st_folium(mapa, width=900, height=650, returned_objects=["last_object_clicked", "last_clicked"])
-    st.empty()
 
 with sidebar_col:
-        st.markdown("### Wykres")
         clicked = st_data.get("last_object_clicked") or st_data.get("last_clicked")
         center_lon, center_lat = compute_rect_center(clicked)
 
@@ -241,20 +244,13 @@ with sidebar_col:
             selected_row = chart_data.loc[nearest_idx]
             selected_sector = selected_row["Sektor_ID"]
         else:
-            selected_sector = sektor
-
-        st.scatter_chart(dates[dates["Sektor_ID"] == selected_sector], x="Data", y=choice)
+            selected_sector = chart_data["Sektor_ID"].iloc[0]
 
         st.divider()
 
-        st.markdown("""
-            <div class="custom-sidebar-box">
-            <div class="custom-sidebar-box-title">Trend i Predykcja AI</div>
-            <div class="custom-sidebar-box-text">Tutaj będzie wykres / predykcja AI</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        trend_placeholder = st.empty()
+        with st.container():
+            st.subheader("Trend i Predykcja AI")
+            st.scatter_chart(dates[dates["Sektor_ID"] == selected_sector], x="Data", y=choice)
 
         st.divider()
 
