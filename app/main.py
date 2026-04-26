@@ -170,11 +170,12 @@ st.markdown("""
 
 
 
-options = ["NDWI", "NDVI", "NDMI"]
+options = ["WRI","NDWI", "NDVI", "NDMI"]
 sidebar_col, main_col = st.columns([1.6, 5], gap=None)
 
 with sidebar_col:
     with st.container(border=True):
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.title("SwS - Space Water Solutions")
         st.subheader("System Wczesnego Ostrzegania")
 
@@ -207,21 +208,55 @@ with main_col:
         "line_cap": "round",
         "fill": True,
         "fill_opacity": 0.6,
-        "weight": 2,
+        "weight": 0,
     }
-    mapa = fl.Map([51.03,16.81], zoom_start=10)
+    current_values = chart_data[choice].dropna()
+    
+    if not current_values.empty:
+        v_min = current_values.min()
+        v_max = current_values.max()
+        
+        # Zabezpieczenie: jeśli wszystkie wartości są identyczne, 
+        # sztucznie rozszerzamy zakres, żeby mapa się nie wykrzaczyła
+        if v_min == v_max:
+            v_min -= 0.1
+            v_max += 0.1
+    else:
+        v_min, v_max = -1, 1
+
+    # 2. Definiujemy palety kolorów (liniowe)
+    palettes = {
+        "NDVI": ["red", "yellow", "green"],
+        "NDWI": ["#f7fbff", "#6baed6", "#084594"], # od jasnego do ciemnego błękitu
+        "NDMI": ["#fff7fb", "#d0d1e6", "#016450"]  # wilgotność
+    }
+    
+    # Wybieramy kolory dla aktualnego wskaźnika
+    current_colors = palettes.get(choice, ["red", "yellow", "green"])
+
+    # 3. Tworzymy liniową mapę kolorów z dynamicznym zakresem
+    kolor = cm.LinearColormap(
+        current_colors,
+        vmin=v_min,
+        vmax=v_max
+    )
+
+    mapa = fl.Map([51.03, 16.81], zoom_start=11)
+    
     for sektor in chart_data["Sektor_ID"].unique():
         dane = chart_data[chart_data['Sektor_ID']==sektor]
-        kolor = cm.LinearColormap(["red", "yellow", "green"], vmin=-1, vmax=1)
+        #kolor = cm.LinearColormap(["red", "yellow", "green"], vmin=-1, vmax=1)
         lwy_lon = dane["Lon"].iat[0]-0.01
         pwy_lon = dane["Lon"].iat[0]+0.01
         lwy_lat = dane["Lat"].iat[0]-0.01
         pwy_lat = dane["Lat"].iat[0]+0.01
+        val = dane[choice].iat[0]
         bounds = [(lwy_lat, lwy_lon), (pwy_lat, pwy_lon)]
         rect = fl.Rectangle(
             bounds=bounds,
             **kw,
-            fill_color=kolor(dane[choice].iat[0]),
+            fill_color=kolor(val),
+            tooltip=fl.Tooltip(f"<b>Sektor:</b> {sektor}<br><b>{choice}:</b> {val:.4f}")
             #tooltip = f"{sektor}: {choice} {dane[choice].iat[0]:.2f}",
         )
         rect.add_to(mapa)
