@@ -4,7 +4,7 @@ import time
 import os
 from dotenv import load_dotenv
 import json
-from src.utils import load_metadata
+from src.utils import load_metadata, generate_grid
 
 load_dotenv()
 CLIENT_ID = os.getenv('SH_ID') 
@@ -16,24 +16,7 @@ def get_token():
     r.raise_for_status()
     return r.json().get("access_token")
 
-def generate_grid(bbox, krok):
-    min_lon, min_lat, max_lon, max_lat = bbox
-    sectors = []
-    idx = 1
-    curr_lon = min_lon
-    while curr_lon < max_lon:
-        curr_lat = min_lat
-        while curr_lat < max_lat:
-            sectors.append({
-                "ID": f"S_{idx}",
-                "bbox": [curr_lon, curr_lat, curr_lon + krok, curr_lat + krok],
-                "lat": round(curr_lat + (krok/2), 5),
-                "lon": round(curr_lon + (krok/2), 5)
-            })
-            idx += 1
-            curr_lat += krok
-        curr_lon += krok
-    return sectors
+
 
 def round_fr(wartosc, miejsca_po_przecinku=4):
     try:
@@ -79,7 +62,7 @@ def get_data(REGION_NAME):
       if ([3, 8, 9, 10].includes(samples.SCL) || samples.dataMask === 0) {
           return { ndvi: [NaN], ndwi: [NaN], ndmi: [NaN], dataMask: [0] };
       }
-      
+
       let ndvi = (samples.B08 - samples.B04) / (samples.B08 + samples.B04);
       let ndwi = (samples.B03 - samples.B08) / (samples.B03 + samples.B08);
       let ndmi = (samples.B08 - samples.B11) / (samples.B08 + samples.B11);

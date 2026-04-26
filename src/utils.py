@@ -26,4 +26,22 @@ def save_metadata(region_name, metadata_dict):
     
     print(f"Metadata saved in: {file_path}")
     
-    
+
+def generate_grid(bbox, krok):
+    min_lon, min_lat, max_lon, max_lat = bbox
+    sectors = []
+    idx = 1
+    curr_lon = min_lon
+    while curr_lon < max_lon:
+        curr_lat = min_lat
+        while curr_lat < max_lat:
+            sectors.append({
+                "ID": f"S_{idx}",
+                "bbox": [curr_lon, curr_lat, curr_lon + krok, curr_lat + krok],
+                "lat": round(curr_lat + (krok/2), 5),
+                "lon": round(curr_lon + (krok/2), 5)
+            })
+            idx += 1
+            curr_lat += krok
+        curr_lon += krok
+    return sectors
