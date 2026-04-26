@@ -8,21 +8,38 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pydeck as pdk
 import plotly
-#import folium as fl
-
+import folium as fl
+import branca.colormap as cm
+from streamlit_folium import st_folium
 
 # --- KONFIGURACJA STRONY ---
 st.set_page_config(page_title="AquaRisk AI", page_icon="💧", layout="wide")
 
 
 # --- DANE ie ruszac
-dates = pd.read_csv('./data/wroclaw_clean_data.csv'); #zwraca obiekt dataframe
+dates = pd.read_csv('./data/wroclaw_small/clean.csv'); #zwraca obiekt dataframe
 #dates.interpolate("linear",0) #przyda sie po zmianie na mniej czyste dane
 del dates['NDVI']
 del dates['NDWI']
 ndvi_values = [1,2]
 sektor = "S_1"
 dzien = "2025-07-01"
+
+
+def compute_rect_center(clicked):
+    if not clicked:
+        return None, None
+
+    geometry = clicked.get("geometry") or {}
+    coords = geometry.get("coordinates")
+    if coords and len(coords) > 0 and len(coords[0]) > 0:
+        ring = coords[0]
+        lons = [point[0] for point in ring]
+        lats = [point[1] for point in ring]
+        return sum(lons) / len(lons), sum(lats) / len(lats)
+
+    return clicked.get("lng"), clicked.get("lat")
+
 # nie ruszac
 # --- CSS dla lepszego wyglądu (Hackathon Style) ---
 st.markdown("""
@@ -65,63 +82,49 @@ left_col, right_col = st.columns([1, 1])
 with left_col: 
     #nie ruszac
     chart_data = dates[dates['Data']==dzien]
+    dane=chart_data[chart_data['Sektor_ID']=="S_1"] 
 
-    chart_data  
-    # mapa = fl.Map([51.03,16.81],zoom_start = 10) #0,02 z kazdej strony
-    # for sektor in dates["Sektor_ID"]:
-    #     fl.Rectangle(
-    #         bounds = [[[dates[dates["Sektor_ID"]==sektor]['Lon']]-0.1,[dates[dates["Sektor_ID"]==sektor]['Lat']]-0.1],[[dates[dates["Sektor_ID"]==sektor]['Lon']]+0.1,[dates[dates["Sektor_ID"]==sektor]['Lat']]+0.1]],
-    #         line_join="round",
-    #         dash_array="5, 5"
-    #     )
-    #     fl.add_to(mapa)
-    # mapa
-# st.pydeck_chart(pdk.Deck(
-#     map_style=None,
-#     initial_view_state=pdk.ViewState(
-#         latitude=51.03,
-#         longitude=16.81,
-#         zoom=10,
-#         pitch=0,
-#     ),
-#     layers=[
-#         pdk.Layer(
-#            "ScreenGridLayer",
-#            data=chart_data,
-#            opacity = 0.8,
-#            cell_size_pixels = 30,
-#            get_position=["Lon","Lat"],
-#            auto_highlight=True,
-#            pickable=True,
-#            extruded=True,
-#         ),
-#     ],
-# ))
+    kw = {
+        "line_cap": "round",
+        "fill": True,
+        "fill_opacity": 0.6,
+        "weight": 2,
+    }
+    mapa = fl.Map([51.03,16.81],zoom_start = 10) #0,02 z kazdej strony
+    for sektor in chart_data["Sektor_ID"]:
+        dane = chart_data[chart_data["Sektor_ID"]==sektor]
+        kolor = cm.LinearColormap(["red", "yellow", "green"], vmin = -1, vmax = 1)
+        lwy_lon = dane["Lon"].iat[0]-0.01
+        pwy_lon = dane["Lon"].iat[0]+0.01
+        lwy_lat = dane["Lat"].iat[0]-0.01
+        pwy_lat = dane["Lat"].iat[0]+0.01
+        bounds = [(lwy_lat,lwy_lon),(pwy_lat,pwy_lon)]
+        rect = fl.Rectangle( #od -1 do 1 duze git
+            bounds = bounds,
+            **kw,
+            fill_color = kolor(dane["NDMI"].iat[0]),
+            #tooltip = f"{sektor}: NDMI {dane['NDMI'].iat[0]:.2f}",
+        )
+        rect.add_to(mapa)
+    kolor.caption = "Legenda"
+    mapa.add_child(kolor)
+    st_data = st_folium(mapa, returned_objects=["last_object_clicked", "last_clicked"])
+
 
 with right_col:
+    clicked = st_data["last_object_clicked"]
+    center_lon, center_lat = compute_rect_center(clicked)
+
+    if clicked and center_lon is not None and center_lat is not None:
+
+        distances = np.sqrt((chart_data["Lon"] - center_lon) ** 2 + (chart_data["Lat"] - center_lat) ** 2)
+        nearest_idx = distances.idxmin()
+        selected_row = chart_data.loc[nearest_idx]
+
+        selected_sector = selected_row["Sektor_ID"]
+    else:
+        st.info("Kliknij prostokąt na mapie")
+        selected_sector = sektor
+
     st.subheader("📈 Trend i Predykcja AI")
-    st.scatter_chart(dates[dates['Sektor_ID']==sektor],x="Data",y="NDMI")
-
-    # fig_trend = go.Figure()
-    # # Historia
-    # #fig_trend.add_trace(go.Scatter(x=df['Data'], y=df['NDVI'], name='Dane Historyczne', line=dict(color='blue', width=3)))
-    # # Predykcja (Mockup)
-    # future_dates = pd.date_range(start=dates[-1], periods=7, freq='D')
-    # future_ndvi = np.linspace(ndvi_values[-1], ndvi_values[-1]-0.1, 7)
-    # fig_trend.add_trace(go.Scatter(x=future_dates, y=future_ndvi, name='Predykcja AI (7 dni)', line=dict(color='red', dash='dash')))
-    
-    # fig_trend.update_layout(yaxis_title="Wskaźnik Kondycji (NDVI/NDMI)", margin=dict(l=0, r=0, t=30, b=0))
-    # st.plotly_chart(fig_trend, use_container_width=True)
-
-# 3. REKOMENDACJE I ALERTY GALILEO
-# st.divider()
-# st.subheader("🚨 Rekomendacje Systemowe")
-# if ndvi_values[-1] < 0.4:
-#     st.error("**ALERT KRYTYCZNY:** Wykryto drastyczny spadek wilgotności. System wysłał automatyczne powiadomienie do lokalnych jednostek zarządzania kryzysowego przez sieć Galileo.")
-#     st.write("- Sugerowane działanie: Intensywne nawadnianie strefy południowej.")
-#     st.write("- Przewidywany koszt strat w przypadku braku reakcji: **45,000 PLN**")
-# else:
-#     st.success("Warunki w normie. Brak zagrożenia suszą w najbliższych 7 dniach.")
-# dates
-# --- STOPKA ---
-st.caption("AquaRisk AI | Cassini Hackathon 2026 | Powered by Copernicus & Galileo")
+    st.scatter_chart(dates[dates["Sektor_ID"] == selected_sector], x="Data", y="NDMI")
