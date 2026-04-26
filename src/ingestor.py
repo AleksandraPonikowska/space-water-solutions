@@ -76,9 +76,10 @@ def get_data(REGION_NAME):
     }
     function evaluatePixel(samples) {
 
-        if ([3, 8, 9, 10].includes(samples.SCL) || samples.dataMask === 0) {
+      if ([3, 8, 9, 10].includes(samples.SCL) || samples.dataMask === 0) {
           return { ndvi: [NaN], ndwi: [NaN], ndmi: [NaN], dataMask: [0] };
       }
+      
       let ndvi = (samples.B08 - samples.B04) / (samples.B08 + samples.B04);
       let ndwi = (samples.B03 - samples.B08) / (samples.B03 + samples.B08);
       let ndmi = (samples.B08 - samples.B11) / (samples.B08 + samples.B11);
@@ -96,7 +97,7 @@ def get_data(REGION_NAME):
                 "data": [{"type": "sentinel-2-l2a", "dataFilter": {"mosaickingOrder": "leastCC"}}]
             },
             "aggregation": {
-                "timeRange": {"from": "2025-06-01T00:00:00Z", "to": "2026-04-20T00:00:00Z"},
+                "timeRange": {"from": "2023-06-01T00:00:00Z", "to": "2026-04-20T00:00:00Z"},
                 "aggregationInterval": {"of": "P1M"},
                 "evalscript": evalscript,
                 "resx": 0.0005, "resy": 0.0005
@@ -120,6 +121,8 @@ def get_data(REGION_NAME):
                         "NDWI": round_fr(out['ndwi']['bands']['B0']['stats']['mean'], 4),
                         "NDMI": round_fr(out['ndmi']['bands']['B0']['stats']['mean'], 4)
                     })
+        else:
+            print(res)
         time.sleep(0.4)
 
     df = pd.DataFrame(all_data)
