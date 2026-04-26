@@ -89,6 +89,29 @@ st.set_page_config(
 
 st.markdown("""
     <style>
+            
+            /* Usuwa marginesy głównego kontenera aplikacji */
+.block-container {
+    padding-top: 0rem !important;
+    padding-bottom: 0rem !important;
+    padding-left: 0rem !important;
+    padding-right: 0rem !important;
+}
+
+/* Usuwa odstępy między kolumnami */
+[data-testid="stHorizontalBlock"] {
+    gap: 0rem !important;
+}
+
+/* Sprawia, że kolumny zajmują pełną wysokość bez dodatkowych paddingów */
+[data-testid="stHorizontalBlock"] > div {
+    padding: 0px !important;
+}
+
+/* Opcjonalnie: ukrywa stopkę i header Streamlit dla efektu 'full screen' */
+header, footer {
+    visibility: hidden;
+}
     .main { background-color: #f0f2f6; }
     .custom-sidebar-box {
         background-color: #EEEBD3;
@@ -178,7 +201,7 @@ sidebar_col, main_col = st.columns([1.6, 5], gap=None)
 
 with sidebar_col:
     with st.container(border=True):
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        #st.markdown("<br><br>", unsafe_allow_html=True)
         st.title("SwS - Space Water Solutions")
         st.subheader("System Wczesnego Ostrzegania")
 
@@ -205,7 +228,7 @@ chart_data = dates[dates['Data'] == selected_date]
 
 with main_col:
     city = "Wrocław"
-    st.title(f"{city}")
+    #st.title(f"{city}")
 
     if chart_data.empty:
         st.warning(f"Brak danych dla daty {selected_date}")
@@ -273,7 +296,15 @@ with main_col:
         rect.add_to(mapa)
     kolor.caption = "Legenda"
     mapa.add_child(kolor)
-    st_data = st_folium(mapa, width=900, height=650, returned_objects=["last_object_clicked", "last_clicked"])
+    st_data = st_folium(
+        mapa,
+        #width=900,
+        
+        use_container_width=True,
+        #use_container_height=True,
+        height=900,
+        returned_objects=["last_object_clicked", "last_clicked"]
+        )
 
 with sidebar_col:
         clicked = st_data.get("last_object_clicked") or st_data.get("last_clicked")
